@@ -58,7 +58,7 @@ public class DrawOnTop extends View {
         	if (mState == STATE_ORIGINAL)
         		decodeYUV420RGB(mRGBData, mYUVData, mImageWidth, mImageHeight);
         	else
-        		decodeYUV420RGBContrastEnhance(mRGBData, mYUVData, mImageWidth, mImageHeight);
+        		decodeYUV420RGBAndChangeColors(mRGBData, mYUVData, mImageWidth, mImageHeight);
         	
         	// Draw bitmap
         	mBitmap.setPixels(mRGBData, 0, mImageWidth, 0, 0, mImageWidth, mImageHeight);
@@ -88,6 +88,75 @@ public class DrawOnTop extends View {
         super.onDraw(canvas);
         
     } // end onDraw method
+
+	private int calculateColors(int r, int g, int b){
+    	int rgb;
+        if (r < 0) r = 0; else if (r > 262143) r = 262143;
+        if (g < 0) g = 0; else if (g > 262143) g = 262143;
+        if (b < 0) b = 0; else if (b > 262143) b = 262143;
+
+      /*  float R[] = {1.0f, 0.0f, 0.0f};
+        float G[] = {0.0f, 1.0f, 0.0f};
+        float B[] = {0.0f, 0.0f, 1.0f};
+*/
+       /* int R[] = {100, 0, 0};
+        int G[] = {0, 100, 0};
+        int B[] = {0, 0, 100};
+
+*//*
+        double R[] = {0.8, 0.2, 0};
+        double G[] = {0.25833, 0.74167, 0};
+        double B[] = {0, 0.14167, 0.85833};*/
+
+        /*double R[] = {0.625, 0.375, 0};
+        double G[] = {0.7, 0.3, 0};
+        double B[] = {0, 0.3, 0.7};*/
+
+        double R[] = {0.8, 0.2, 0};
+        double G[] = {0.25833, 0.74167, 0};
+        double B[] = {0, 0.14167, 0.85833};
+
+        double fr, fg, fb;
+
+        fr = r * R[0]  + g *R[1]  + b * R[2];
+        fg = r * G[0]  + g * G[1]  + b *G[2];
+        fb = r * B[0]  + g * B[1]  + b *B[2];
+
+        r = (int) fr;
+        g = (int) fg;
+        b = (int) fb;
+
+
+    	rgb = 0xff000000 | ((r << 6) & 0xff0000) | ((g >> 2) & 0xff00) | ((b >> 10) & 0xff);
+    	return rgb;
+	}
+
+
+
+    private void decodeYUV420RGBAndChangeColors(int[] rgb, byte[] yuv420sp, int width, int height) {
+        // Convert YUV to RGB
+        final int frameSize = width * height;
+        for (int j = 0, yp = 0; j < height; j++) {
+            int uvp = frameSize + (j >> 1) * width, u = 0, v = 0;
+            for (int i = 0; i < width; i++, yp++) {
+                int y = (0xff & ((int) yuv420sp[yp])) - 16;
+                if (y < 0) y = 0;
+                if ((i & 1) == 0) {
+                    v = (0xff & yuv420sp[uvp++]) - 128;
+                    u = (0xff & yuv420sp[uvp++]) - 128;
+                }
+
+                int y1192 = 1192 * y;
+                int r = (y1192 + 1634 * v);
+                int g = (y1192 - 833 * v - 400 * u);
+                int b = (y1192 + 2066 * u);
+
+
+
+                rgb[yp] = calculateColors(r, g, b);
+            }
+        }
+    }
 
     private void decodeYUV420RGB(int[] rgb, byte[] yuv420sp, int width, int height) {
     	// Convert YUV to RGB
@@ -155,11 +224,10 @@ public class DrawOnTop extends View {
     			int b = (y1192 + 2066 * u);
     			
     			//if (r < 0) r = 0; else if (r > 262143) r = 262143;
-    			if (r < 0) r = 0; else if (r > 262143) r = 0;
-    			if (g < 0) g = 0; else if (g > 262143) g = 262143;
-    			if (b < 0) b = 0; else if (b > 262143) b = 262143;
-    			
-    			rgb[yp] = 0xff000000 | ((r << 6) & 0xff0000) | ((g >> 2) & 0xff00) | ((b >> 10) & 0xff);
+
+
+    			rgb[yp] = calculateColors(r, g, b);
+//    			rgb[yp] = 0xff000000 | ((r << 6) & 0xff0000) | ((g >> 2) & 0xff00) | ((b >> 10) & 0xff);
     		}
     	}
     }}
